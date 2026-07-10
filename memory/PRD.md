@@ -1,66 +1,69 @@
 # UGS HireFlow — PRD
 
 ## Original Problem Statement
-Build a production-ready Consultancy Management System (CMS) called **UGS HireFlow** by UGS IT Solutions to replace a 15-year Excel-based recruitment process with one centralized web app. Manages the full recruitment lifecycle from candidate registration through placement. Roles: Super Admin, Employee/Recruiter, Candidate.
+Production-ready Consultancy Management System (CMS) called **UGS HireFlow** by UGS IT Solutions to replace 15 years of Excel-based recruitment. 3 roles: Super Admin, Employee/Recruiter, Candidate.
 
-## Stack Decisions
-- **Backend**: FastAPI + MongoDB (Motor async) — production-grade equivalent chosen (problem statement mentioned Postgres/Prisma; platform runs on Mongo).
-- **Frontend**: React 19 + Tailwind + Shadcn/UI + TanStack Query + Recharts + Sonner toasts.
-- **Auth**: JWT-based custom auth with RBAC middleware (`require_roles`).
-- **File Storage**: Emergent Object Storage integration.
-- **Design**: Outfit (display) + Manrope (body) fonts. Royal Blue (#2563EB) primary, Emerald Green (#10B981) accent, glassmorphism, dark/light themes.
+## Stack
+- Backend: FastAPI + MongoDB (Motor async)
+- Frontend: React 19 + Tailwind + Shadcn/UI + TanStack Query + Recharts + Sonner
+- Auth: JWT + RBAC via `require_roles`
+- Storage: Emergent Object Storage
+- Fonts: Outfit (display) + Manrope (body)
+- Palette: Royal Blue #2563EB, Emerald #10B981, gradient logo tint
 
-## User Personas
-1. **Super Admin** — sees everything, manages employees, verifies/assigns candidates, tracks revenue.
-2. **Employee/Recruiter** — sees only assigned candidates, updates interview stages, records payments.
-3. **Candidate** — views own workspace (assigned recruiter, company, job, timeline, payments).
+## Modules — What's Implemented
 
-## Core Modules (Static)
-Auth · Candidate Registration (public + admin) · Candidate Workspace (Personal, Pipeline, Docs, Payments, Partner, Activity tabs) · Candidate Verification & Assignment · Companies · Jobs · Batches · Interview Pipeline (Kanban) · Payment recording (per-candidate) · Partner info (per-candidate) · Notifications · Activity Logs · Global Search · Dashboards · Reports · CSV Export/Import · Settings.
+### Phase 1 (Feb 2026)
+- Public site (Home/About/Services/Contact/Register/Login), JWT auth, seed data (1 admin, 2 recruiters, 10 candidates, 5 companies, 10 jobs, 2 batches)
+- Candidate CRUD + Companies + Jobs + Batches CRUD, Interview Pipeline Kanban, Dashboards (3 roles), Global Search, Notifications, Activity Log, Reports (charts + placements), CSV Export/Import, File Upload, Dark/Light theme, Settings + Change Password. Test suite 34/34.
 
-## What's Been Implemented (2026-02)
-- ✅ Public website: Home, About, Services, Contact, Register, Login
-- ✅ JWT Auth with RBAC (admin/employee/candidate)
-- ✅ Seed data: 1 admin, 2 employees, 10 candidates, 5 companies, 10 jobs, 2 batches, timelines, payments, partner records
-- ✅ Full Candidate lifecycle: register → verify → assign → pipeline stages → payment → placed
-- ✅ Candidate workspace with 6 tabs (Overview, Pipeline, Documents, Payments, Partner, Activity)
-- ✅ Companies / Jobs / Batches CRUD + candidate allocation
-- ✅ Interview Pipeline Kanban
-- ✅ Dashboards for all 3 roles with KPIs + charts
-- ✅ Global Search (candidates/companies/jobs)
-- ✅ In-app notifications with unread badge
-- ✅ Activity log for every important action
-- ✅ CSV Export (candidates) + CSV Import (bulk migrate Excel data)
-- ✅ Reports (pie + bar charts + placements table)
-- ✅ File upload via Emergent Object Storage (resume/photo/documents)
-- ✅ Dark/Light theme toggle
-- ✅ Settings + Change Password
-- ✅ Responsive layout (desktop/tablet/mobile)
+### Phase 2 (Feb 2026 — Business Depth)
+- **Partners** as first-class entity — created during candidate verification; searchable dropdown; per-partner candidate list & count; filter candidates by partner (`/app/partners`)
+- **Comprehensive Candidate Registration** — 4-step wizard, multipart upload of photo/resume/certificates/experience-docs/supporting-docs at signup; reference_name + reference_phone captured
+- **Verify V2 Dialog** — admin sees reference info; picks existing partner or creates new (dedupe by phone); links candidate ↔ partner atomically
+- **Soft Delete / Archive / Restore / Permanent Delete** — full lifecycle with admin controls
+- **Duplicate Detection** + **Merge Candidates** (payments/timeline/notes/documents/skills merged into target; source soft-deleted)
+- **Profile Completion %** computed from field/list weights + progress bar
+- **Employee Detail** — workload, stage breakdown, assigned candidates, activity, login history (`/app/employees/{id}`)
+- **Company Hiring History** — stats + jobs + HR contacts (`/app/companies/{id}`)
+- **Job Workspace** — close/reopen/bulk-allocate/remove-candidate/stats (`/app/jobs/{id}`)
+- **Batch Detail** — mark running/completed, remove candidate (`/app/batches/{id}`)
+- **Excel .xlsx Import** — preview + duplicate detection + skip-duplicates + import summary
+- **Excel .xlsx Export** — filtered by status/employee/partner/payment
+- **Organization Settings** — company/brand/email/phone/address/working hours/default fee
+- **Saved Filters** per user
+- **Notifications** — role-based triggers on candidate registered/verified/assigned, interview scheduled/selected/placed/offer, payment updated, company/job/batch created
+- **Interconnected Navigation** — every list card links to detail; candidate detail shows Linked Records (Recruiter → Employee page, Company → Company page, Job → Job Workspace, Batch → Batch Detail, Partner → filtered candidate list)
+- **Extended Global Search** — candidates, companies, jobs, employees, batches, partners (all sections navigable)
+- **Login/Logout Activity Log** — auto-recorded
+- **Global Error Handlers** — structured JSON 4xx/5xx responses
+- **Branding** — UGS logo everywhere (sidebar, login, register, footer, favicon)
+
+## Deferred (per user)
+- PDF Export
+- Advanced Report Generation
+- WhatsApp/SMS/Email Automation
+- Multi-branch
+- AI features
+- Loading screen animation (not requested in final scope)
+- Landing page redesign (Phase 2c — pending)
 
 ## Test Credentials
 - Admin: `admin@ugs.com` / `Admin@123`
-- Employee: `priya@ugs.com` / `Employee@123`
-- Employee: `rahul@ugs.com` / `Employee@123`
+- Recruiter: `priya@ugs.com` / `Employee@123`
+- Recruiter: `rahul@ugs.com` / `Employee@123`
 - Candidate: `arjun.k@example.com` / `Candidate@123`
 
-## Backlog (P0/P1/P2 for future iterations)
-### P0
-- Real Excel (.xlsx) import/export (openpyxl) — CSV works today
-- PDF export for reports & candidate profile
-- Email/OTP-based Forgot Password (endpoint stubbed, delivery deferred)
+## Test Coverage
+- `/app/backend/tests/backend_test.py` — Phase 1 (34/34)
+- `/app/backend/tests/test_phase2.py` — Phase 2 (39/39)
+- Full regression clean. Frontend flows verified end-to-end via playwright.
 
-### P1
-- Advanced analytics: monthly placement trends, TAT (turnaround time), recruiter leaderboard
-- Dedicated Payment Module (separate ledger view across candidates)
-- Dedicated Partner Module (partners as first-class entities)
-- Notifications preferences + email delivery (Resend/SendGrid)
-
-### P2
+## Backlog (Version 2 — future)
+- PDF Export (reportlab): candidate PDF, filtered reports
+- Advanced Analytics: TAT, recruiter leaderboard, monthly placement trends
+- Redesigned landing page with animated sections + testimonials + FAQ
+- Loading screen with rotating motivational messages
+- Email/SMS/WhatsApp automations (SendGrid/Twilio)
+- Mobile PWA
 - Multi-branch support
-- AI resume parser + auto-skill extraction
-- WhatsApp/SMS automations
-- Mobile PWA / native app
-- Advanced reporting builder
-
-## API Test Coverage
-- Backend: `/app/backend/tests/backend_test.py` — 34/34 passing (auth, RBAC, candidates full lifecycle, employees, companies, jobs, batches, notifications, activity, dashboards, search, reports, CSV).
