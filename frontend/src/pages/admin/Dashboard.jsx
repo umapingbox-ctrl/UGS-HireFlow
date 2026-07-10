@@ -62,8 +62,8 @@ export default function AdminDashboard() {
               <h3 className="font-display text-lg font-semibold">Status Distribution</h3>
               <span className="text-xs text-muted-foreground">All candidates</span>
             </div>
-            <div className="mt-4 h-72">
-              <ResponsiveContainer>
+            <div className="mt-4 h-72 w-full">
+              <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.status_distribution || []}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                   <XAxis dataKey="status" tick={{ fontSize: 11 }} angle={-25} textAnchor="end" height={80} />
