@@ -1,12 +1,14 @@
 import React from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { Menu, X, ArrowRight } from "lucide-react";
+import { Menu, X, ArrowRight, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
+import { useTheme } from "@/context/ThemeContext";
 
 export function PublicLayout() {
   const [open, setOpen] = React.useState(false);
   const loc = useLocation();
+  const { theme, toggle } = useTheme();
   React.useEffect(() => setOpen(false), [loc.pathname]);
 
   const links = [
@@ -35,9 +37,12 @@ export function PublicLayout() {
           </nav>
 
           <div className="hidden md:flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={toggle} data-testid="public-theme-toggle" aria-label="Toggle theme">
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
             <Link to="/login"><Button variant="ghost" data-testid="nav-login-btn">Sign in</Button></Link>
             <Link to="/register">
-              <Button className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground" data-testid="nav-register-btn">
+              <Button className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20" data-testid="nav-register-btn">
                 Register <ArrowRight className="ml-1.5 h-4 w-4" />
               </Button>
             </Link>
