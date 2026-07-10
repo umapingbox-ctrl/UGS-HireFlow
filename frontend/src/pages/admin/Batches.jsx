@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, GraduationCap, Users2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -45,19 +46,21 @@ export default function Batches() {
       </div>
       <div className="grid md:grid-cols-2 gap-4">
         {batches.map(b => (
-          <Card key={b.id} className="p-5 border-border hover:-translate-y-0.5 transition-transform">
-            <div className="flex items-start justify-between">
-              <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary grid place-items-center"><GraduationCap className="h-5 w-5" /></div>
-              <StatusPill status={b.status} />
-            </div>
-            <div className="mt-3 font-display font-semibold text-lg">{b.name}</div>
-            <div className="text-xs text-muted-foreground">{b.technology} · Trainer: {b.trainer || "—"}</div>
-            {b.description && <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{b.description}</p>}
-            <div className="mt-3 flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">{b.start_date} → {b.end_date}</span>
-              <span className="inline-flex items-center gap-1 text-primary"><Users2 className="h-3 w-3" />{(b.candidate_ids || []).length}</span>
-            </div>
-          </Card>
+          <Link key={b.id} to={`/app/batches/${b.id}`}>
+            <Card className="p-5 border-border hover:-translate-y-0.5 transition-transform cursor-pointer h-full">
+              <div className="flex items-start justify-between">
+                <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary grid place-items-center"><GraduationCap className="h-5 w-5" /></div>
+                <StatusPill status={b.status} />
+              </div>
+              <div className="mt-3 font-display font-semibold text-lg">{b.name}</div>
+              <div className="text-xs text-muted-foreground">{b.technology} · Trainer: {b.trainer || "—"}</div>
+              {b.description && <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{b.description}</p>}
+              <div className="mt-3 flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">{b.start_date} → {b.end_date}</span>
+                <span className="inline-flex items-center gap-1 text-primary"><Users2 className="h-3 w-3" />{(b.candidate_ids || []).length}</span>
+              </div>
+            </Card>
+          </Link>
         ))}
       </div>
     </div>

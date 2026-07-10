@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -40,22 +41,24 @@ export default function Employees() {
       </div>
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {emps.map(e => (
-          <Card key={e.id} className="p-5 border-border hover:-translate-y-0.5 transition-transform">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-primary/10 text-primary grid place-items-center font-display font-bold">{e.full_name?.[0]}</div>
-              <div>
-                <div className="font-display font-semibold">{e.full_name}</div>
-                <div className="text-xs text-muted-foreground">{e.designation || "Recruiter"}</div>
+          <Link key={e.id} to={`/app/employees/${e.id}`}>
+            <Card className="p-5 border-border hover:-translate-y-0.5 transition-transform cursor-pointer h-full">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-full bg-primary/10 text-primary grid place-items-center font-display font-bold">{e.full_name?.[0]}</div>
+                <div>
+                  <div className="font-display font-semibold">{e.full_name}</div>
+                  <div className="text-xs text-muted-foreground">{e.designation || "Recruiter"}</div>
+                </div>
               </div>
-            </div>
-            <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-              <div>{e.email}</div><div>{e.phone || "—"}</div>
-            </div>
-            <div className="mt-3 flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">{e.department || "—"}</span>
-              <span className="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-xs font-medium">{e.assigned_count || 0} candidates</span>
-            </div>
-          </Card>
+              <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                <div>{e.email}</div><div>{e.phone || "—"}</div>
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">{e.department || "—"}</span>
+                <span className="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-xs font-medium">{e.assigned_count || 0} candidates</span>
+              </div>
+            </Card>
+          </Link>
         ))}
       </div>
     </div>

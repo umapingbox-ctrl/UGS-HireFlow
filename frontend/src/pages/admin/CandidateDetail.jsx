@@ -4,16 +4,18 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   ArrowLeft, CheckCircle2, User, Briefcase, GraduationCap,
-  FileText, IndianRupee, Handshake, Clock, Plus, Upload
+  FileText, IndianRupee, Handshake, Clock, Plus, Upload, Archive, Trash2, RotateCcw, GitMerge, ExternalLink
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { StatusPill, StatusDot } from "@/components/StatusDot";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
@@ -37,15 +39,18 @@ export default function CandidateDetail() {
   const { data: companies = [] } = useQuery({
     queryKey: ["companies-basic"], queryFn: async () => (await api.get("/companies")).data,
   });
+  const { data: partners = [] } = useQuery({
+    queryKey: ["partners"], queryFn: async () => (await api.get("/partners")).data,
+    enabled: user?.role === "admin",
+  });
 
-  const refresh = () => qc.invalidateQueries({ queryKey: ["candidate", id] });
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: ["candidate", id] });
+    qc.invalidateQueries({ queryKey: ["partners"] });
+  };
 
   if (isLoading || !c) return <div className="text-muted-foreground">Loading...</div>;
 
-  const verify = async () => {
-    try { await api.post(`/candidates/${id}/verify`); toast.success("Candidate verified"); refresh(); }
-    catch { toast.error("Failed"); }
-  };
   const assignEmp = async (empId) => {
     try {
       const fd = new FormData(); fd.append("employee_id", empId);
@@ -53,6 +58,26 @@ export default function CandidateDetail() {
       toast.success("Assigned"); refresh();
     } catch { toast.error("Failed"); }
   };
+  const archive = async () => {
+    try { await api.post(`/candidates/${id}/archive`); toast.success("Archived"); refresh(); }
+    catch { toast.error("Failed"); }
+  };
+  const restore = async () => {
+    try { await api.post(`/candidates/${id}/restore`); toast.success("Restored"); refresh(); }
+    catch { toast.error("Failed"); }
+  };
+  const softDelete = async () => {
+    try { await api.post(`/candidates/${id}/soft-delete`); toast.success("Deleted"); window.location.href = "/app/candidates"; }
+    catch { toast.error("Failed"); }
+  };
+  const permanentDelete = async () => {
+    try { await api.delete(`/candidates/${id}/permanent`); toast.success("Permanently deleted"); window.location.href = "/app/candidates"; }
+    catch { toast.error("Failed"); }
+  };
+
+  const linkedPartner = partners.find(p => p.id === c.partner_id);
+  const linkedEmp = employees.find(e => e.id === c.assigned_employee_id);
+  const linkedCo = companies.find(co => co.id === c.assigned_company_id);
 
   return (
     <div className="space-y-6" data-testid="candidate-detail-page">
@@ -75,7 +100,14 @@ export default function CandidateDetail() {
           <div className="mt-4 flex flex-wrap gap-2">
             <StatusPill status={c.status} />
             <StatusPill status={c.payment_status} />
+            {c.is_archived && <span className="rounded-full bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 px-2.5 py-1 text-xs font-medium">Archived</span>}
           </div>
+          {typeof c.profile_completion === "number" && (
+            <div className="mt-4">
+              <div className="flex items-center justify-between text-xs mb-1"><span className="text-muted-foreground">Profile completion</span><span className="font-semibold">{c.profile_completion}%</span></div>
+              <Progress value={c.profile_completion} className="h-1.5" />
+            </div>
+          )}
           <div className="mt-6 space-y-2.5 text-sm">
             <Row label="Email" value={c.email} />
             <Row label="Phone" value={c.phone} />
@@ -85,19 +117,55 @@ export default function CandidateDetail() {
             <Row label="Notice" value={c.notice_period_days ? `${c.notice_period_days} days` : "—"} />
           </div>
 
+          {/* RELATED */}
+          <div className="mt-6 pt-6 border-t border-border space-y-2">
+            <div className="overline text-[10px] text-muted-foreground mb-2">Linked Records</div>
+            {linkedEmp && <RelatedLink icon={User} label="Recruiter" text={linkedEmp.full_name} to={`/app/employees/${linkedEmp.id}`} />}
+            {linkedCo && <RelatedLink icon={Briefcase} label="Company" text={linkedCo.name} to={`/app/companies/${linkedCo.id}`} />}
+            {c.assigned_job_id && <RelatedLink icon={Briefcase} label="Job" text="Open Job" to={`/app/jobs/${c.assigned_job_id}`} />}
+            {c.batch_id && <RelatedLink icon={GraduationCap} label="Batch" text="Batch" to={`/app/batches/${c.batch_id}`} />}
+            {linkedPartner && <RelatedLink icon={Handshake} label="Partner" text={linkedPartner.name} to={`/app/candidates?partner_id=${linkedPartner.id}`} />}
+            {!linkedEmp && !linkedCo && !c.batch_id && !linkedPartner && <div className="text-xs text-muted-foreground italic">No linked records yet</div>}
+          </div>
+
           {user?.role === "admin" && (
             <div className="mt-6 pt-6 border-t border-border space-y-3">
               {c.status === "pending_verification" && (
-                <Button className="w-full" onClick={verify} data-testid="verify-btn"><CheckCircle2 className="h-4 w-4 mr-2" /> Verify Candidate</Button>
+                <VerifyDialog candidateId={c.id} candidate={c} partners={partners} onDone={refresh} />
               )}
               <div>
                 <Label className="text-xs mb-1.5 block">Assign Recruiter</Label>
-                <Select value={c.assigned_employee_id || ""} onValueChange={assignEmp}>
+                <Select value={c.assigned_employee_id || "unassigned"} onValueChange={(v) => v !== "unassigned" && assignEmp(v)}>
                   <SelectTrigger data-testid="assign-employee-select"><SelectValue placeholder="Select recruiter" /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>)}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="flex flex-wrap gap-2 pt-2">
+                {!c.is_archived
+                  ? <Button size="sm" variant="outline" onClick={archive} data-testid="archive-btn"><Archive className="h-3.5 w-3.5 mr-1" /> Archive</Button>
+                  : <Button size="sm" variant="outline" onClick={restore} data-testid="restore-btn"><RotateCcw className="h-3.5 w-3.5 mr-1" /> Restore</Button>}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700" data-testid="delete-btn"><Trash2 className="h-3.5 w-3.5 mr-1" /> Delete</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete candidate?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Soft-delete keeps records but hides the candidate. Permanent delete removes everything and cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={softDelete}>Soft Delete</AlertDialogAction>
+                      <AlertDialogAction onClick={permanentDelete} className="bg-red-600 hover:bg-red-700">Permanent Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <MergeDialog candidateId={c.id} candidateName={c.full_name} onDone={() => window.location.href = "/app/candidates"} />
               </div>
             </div>
           )}
@@ -163,6 +231,18 @@ const Row = ({ label, value }) => (
     <span className="text-xs text-muted-foreground">{label}</span>
     <span className="text-sm font-medium text-right truncate">{value}</span>
   </div>
+);
+const RelatedLink = ({ icon: Icon, label, text, to }) => (
+  <Link to={to} className="flex items-center justify-between gap-2 rounded-lg border border-border/60 px-3 py-2 hover:bg-primary/5 hover:border-primary/30 transition-colors">
+    <div className="flex items-center gap-2 min-w-0">
+      <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
+      <div className="min-w-0">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+        <div className="text-sm font-medium truncate">{text}</div>
+      </div>
+    </div>
+    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+  </Link>
 );
 const Section = ({ title, icon: Icon, children }) => (
   <Card className="p-5 border-border">
@@ -403,5 +483,178 @@ function ActivityTab({ candidateId }) {
           </div>
         ))}</div>}
     </Card>
+  );
+}
+
+/** Verify dialog: shows reference info from registration; admin picks existing partner
+    from searchable dropdown OR creates a new one (pre-filled from reference). */
+function VerifyDialog({ candidateId, candidate, partners, onDone }) {
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState("none");  // none | existing | new
+  const [partnerId, setPartnerId] = useState("");
+  const [partnerSearch, setPartnerSearch] = useState("");
+  const [newPartner, setNewPartner] = useState({
+    name: candidate.reference_name || "",
+    phone: candidate.reference_phone || "",
+    email: "", notes: "", commission_percent: "",
+  });
+  const [remarks, setRemarks] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const filteredPartners = partners.filter(p => {
+    const q = partnerSearch.toLowerCase();
+    return !q || p.name.toLowerCase().includes(q) || (p.phone || "").includes(q)
+      || (p.partner_code || "").toLowerCase().includes(q);
+  });
+
+  React.useEffect(() => {
+    // Auto-preselect if reference matches an existing partner by phone
+    if (open && candidate.reference_phone) {
+      const match = partners.find(p => p.phone === candidate.reference_phone);
+      if (match) { setMode("existing"); setPartnerId(match.id); }
+      else if (candidate.reference_name || candidate.reference_phone) { setMode("new"); }
+    }
+  }, [open]); // eslint-disable-line
+
+  const submit = async () => {
+    setBusy(true);
+    try {
+      const body = { remarks: remarks || null };
+      if (mode === "existing" && partnerId) body.partner_id = partnerId;
+      if (mode === "new" && newPartner.name && newPartner.phone) {
+        body.new_partner = {
+          ...newPartner,
+          commission_percent: parseFloat(newPartner.commission_percent) || null,
+        };
+      }
+      await api.post(`/candidates/${candidateId}/verify-v2`, body);
+      toast.success("Candidate verified");
+      setOpen(false); onDone();
+    } catch (e) { toast.error(e?.response?.data?.detail || "Failed"); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="w-full" data-testid="verify-btn">
+          <CheckCircle2 className="h-4 w-4 mr-2" /> Verify Candidate
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Verify Candidate</DialogTitle>
+          <DialogDescription>Review reference information and link to a Partner (optional).</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          {(candidate.reference_name || candidate.reference_phone) && (
+            <div className="rounded-lg bg-primary/5 border border-primary/20 p-3 text-sm">
+              <div className="overline text-[10px] text-primary mb-1">Reference from Registration</div>
+              <div className="font-medium">{candidate.reference_name || "Not provided"}</div>
+              <div className="text-xs text-muted-foreground">{candidate.reference_phone || "No phone"}</div>
+            </div>
+          )}
+
+          <div>
+            <Label className="text-xs mb-1.5 block">Partner Linking</Label>
+            <div className="flex gap-2">
+              <Button type="button" size="sm" variant={mode === "none" ? "default" : "outline"} onClick={() => setMode("none")}>None</Button>
+              <Button type="button" size="sm" variant={mode === "existing" ? "default" : "outline"} onClick={() => setMode("existing")} data-testid="mode-existing">Select existing</Button>
+              <Button type="button" size="sm" variant={mode === "new" ? "default" : "outline"} onClick={() => setMode("new")} data-testid="mode-new">Create new</Button>
+            </div>
+          </div>
+
+          {mode === "existing" && (
+            <div className="space-y-2">
+              <Input placeholder="Search partners by name, phone, code..." value={partnerSearch}
+                onChange={(e) => setPartnerSearch(e.target.value)} data-testid="partner-search" />
+              <div className="max-h-56 overflow-y-auto rounded-lg border border-border">
+                {filteredPartners.length === 0 && <div className="p-4 text-sm text-muted-foreground text-center">No partners</div>}
+                {filteredPartners.map(p => (
+                  <button key={p.id} type="button" onClick={() => setPartnerId(p.id)}
+                    className={`w-full text-left px-3 py-2.5 border-b border-border/40 last:border-0 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/40 ${partnerId === p.id ? "bg-primary/10" : ""}`}
+                    data-testid={`partner-option-${p.id}`}>
+                    <div>
+                      <div className="text-sm font-medium">{p.name}</div>
+                      <div className="text-xs text-muted-foreground">{p.phone} · {p.partner_code} · {p.candidate_count || 0} candidates</div>
+                    </div>
+                    {partnerId === p.id && <CheckCircle2 className="h-4 w-4 text-primary" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {mode === "new" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Partner Name*</Label><Input value={newPartner.name}
+                onChange={(e) => setNewPartner({ ...newPartner, name: e.target.value })} data-testid="new-partner-name" /></div>
+              <div><Label className="text-xs">Phone*</Label><Input value={newPartner.phone}
+                onChange={(e) => setNewPartner({ ...newPartner, phone: e.target.value })} data-testid="new-partner-phone" /></div>
+              <div><Label className="text-xs">Email</Label><Input value={newPartner.email}
+                onChange={(e) => setNewPartner({ ...newPartner, email: e.target.value })} /></div>
+              <div><Label className="text-xs">Commission %</Label><Input type="number" value={newPartner.commission_percent}
+                onChange={(e) => setNewPartner({ ...newPartner, commission_percent: e.target.value })} /></div>
+              <div className="col-span-2"><Label className="text-xs">Notes</Label><Textarea rows={2} value={newPartner.notes}
+                onChange={(e) => setNewPartner({ ...newPartner, notes: e.target.value })} /></div>
+            </div>
+          )}
+
+          <div>
+            <Label className="text-xs mb-1.5 block">Verification Remarks (optional)</Label>
+            <Textarea rows={2} value={remarks} onChange={(e) => setRemarks(e.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={submit} disabled={busy} data-testid="verify-submit">{busy ? "Verifying..." : "Verify"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function MergeDialog({ candidateId, candidateName, onDone }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState(null);
+  const { data } = useQuery({
+    queryKey: ["merge-candidates", search],
+    queryFn: async () => (await api.get("/candidates", { params: { q: search, limit: 20 } })).data,
+    enabled: open && search.length >= 2,
+  });
+  const submit = async () => {
+    if (!selected) return;
+    try {
+      await api.post("/candidates/merge", { source_id: candidateId, target_id: selected });
+      toast.success("Merged"); setOpen(false); onDone();
+    } catch (e) { toast.error(e?.response?.data?.detail || "Merge failed"); }
+  };
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" data-testid="merge-btn"><GitMerge className="h-3.5 w-3.5 mr-1" /> Merge</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Merge candidate</DialogTitle>
+          <DialogDescription>Merge <strong>{candidateName}</strong> into another candidate. Payments, timeline, notes and documents move over. This candidate will be soft-deleted.</DialogDescription>
+        </DialogHeader>
+        <Input placeholder="Search target candidate..." value={search} onChange={(e) => setSearch(e.target.value)} data-testid="merge-search" />
+        <div className="max-h-72 overflow-y-auto space-y-1">
+          {(data?.items || []).filter(c => c.id !== candidateId).map(c => (
+            <button key={c.id} onClick={() => setSelected(c.id)}
+              className={`w-full text-left px-3 py-2 rounded-lg border ${selected === c.id ? "border-primary bg-primary/5" : "border-border/60 hover:bg-slate-50 dark:hover:bg-slate-800/40"}`}>
+              <div className="text-sm font-medium">{c.full_name}</div>
+              <div className="text-xs text-muted-foreground">{c.candidate_code} · {c.email}</div>
+            </button>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={submit} disabled={!selected} data-testid="merge-submit">Merge</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -34,8 +34,9 @@ export default function Login() {
         <Link to="/" className="inline-flex items-center gap-2 text-white/80 hover:text-white text-sm">
           <ArrowLeft className="h-4 w-4" /> Back to site
         </Link>
-        <div className="mt-24">
-          <div className="overline text-white/70">UGS HireFlow</div>
+        <div className="mt-16">
+          <img src="/favicon.png" alt="UGS" className="h-16 w-16 object-contain drop-shadow-lg" />
+          <div className="mt-8 overline text-white/70">UGS HireFlow</div>
           <h1 className="mt-3 font-display text-5xl font-bold tracking-tighter">Recruitment,<br />operationalised.</h1>
           <p className="mt-4 text-white/85 max-w-md leading-relaxed">
             Sign in to your console to manage candidates, companies, and placements.
@@ -55,6 +56,10 @@ export default function Login() {
           <Link to="/" className="md:hidden inline-flex items-center gap-2 text-sm text-muted-foreground mb-4">
             <ArrowLeft className="h-4 w-4" /> Back
           </Link>
+          <div className="md:hidden flex items-center gap-2.5 mb-6">
+            <img src="/favicon.png" alt="UGS" className="h-10 w-10 object-contain" />
+            <div className="font-display font-bold text-lg tracking-tight bg-gradient-to-r from-[#4A5FBF] via-[#5B8CB5] to-[#3EB489] bg-clip-text text-transparent">UGS HireFlow</div>
+          </div>
           <div className="overline text-primary">Sign in</div>
           <h2 className="mt-2 font-display text-3xl font-bold tracking-tight">Welcome back</h2>
           <p className="mt-2 text-sm text-muted-foreground">Enter your credentials to continue.</p>

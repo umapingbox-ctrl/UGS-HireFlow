@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Briefcase, MapPin, IndianRupee } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -69,23 +70,25 @@ export default function Jobs() {
       </div>
       <div className="grid md:grid-cols-2 gap-4">
         {jobs.map(j => (
-          <Card key={j.id} className="p-5 border-border hover:-translate-y-0.5 transition-transform">
-            <div className="flex items-start justify-between">
-              <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary grid place-items-center"><Briefcase className="h-5 w-5" /></div>
-              <StatusPill status={j.status} />
-            </div>
-            <div className="mt-3 font-display font-semibold text-lg">{j.title}</div>
-            <div className="text-xs text-muted-foreground">{j.company_name}</div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {(j.skills || []).slice(0, 5).map(s => <span key={s} className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs">{s}</span>)}
-            </div>
-            <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{j.location || "—"}</span>
-              <span className="inline-flex items-center gap-1"><IndianRupee className="h-3 w-3" />{j.salary_min ? `${(j.salary_min / 100000).toFixed(1)}-${(j.salary_max / 100000).toFixed(1)}L` : "Not disclosed"}</span>
-              <span>{j.experience_min}-{j.experience_max || "+"} yrs</span>
-              <span>{j.vacancies} vacancy</span>
-            </div>
-          </Card>
+          <Link key={j.id} to={`/app/jobs/${j.id}`}>
+            <Card className="p-5 border-border hover:-translate-y-0.5 transition-transform cursor-pointer h-full">
+              <div className="flex items-start justify-between">
+                <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary grid place-items-center"><Briefcase className="h-5 w-5" /></div>
+                <StatusPill status={j.status} />
+              </div>
+              <div className="mt-3 font-display font-semibold text-lg">{j.title}</div>
+              <div className="text-xs text-muted-foreground">{j.company_name}</div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {(j.skills || []).slice(0, 5).map(s => <span key={s} className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs">{s}</span>)}
+              </div>
+              <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{j.location || "—"}</span>
+                <span className="inline-flex items-center gap-1"><IndianRupee className="h-3 w-3" />{j.salary_min ? `${(j.salary_min / 100000).toFixed(1)}-${(j.salary_max / 100000).toFixed(1)}L` : "Not disclosed"}</span>
+                <span>{j.experience_min}-{j.experience_max || "+"} yrs</span>
+                <span>{j.vacancies} vacancy</span>
+              </div>
+            </Card>
+          </Link>
         ))}
       </div>
     </div>

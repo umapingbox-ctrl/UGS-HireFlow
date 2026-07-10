@@ -2,6 +2,7 @@ import React from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { Menu, X, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/Logo";
 
 export function PublicLayout() {
   const [open, setOpen] = React.useState(false);
@@ -20,13 +21,7 @@ export function PublicLayout() {
       <header className="sticky top-0 z-40 glass border-b border-border/60">
         <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5" data-testid="brand-logo">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] grid place-items-center soft-shadow">
-              <span className="text-white font-display font-bold text-lg">U</span>
-            </div>
-            <div className="leading-none">
-              <div className="font-display font-bold text-lg tracking-tight">UGS HireFlow</div>
-              <div className="text-[10px] text-muted-foreground overline mt-0.5">by UGS IT Solutions</div>
-            </div>
+            <Logo variant="full" size={38} showTagline />
           </Link>
 
           <nav className="hidden md:flex items-center gap-8">
@@ -70,7 +65,10 @@ export function PublicLayout() {
       <footer className="mt-24 bg-slate-950 text-slate-300">
         <div className="mx-auto max-w-7xl px-6 py-16 grid md:grid-cols-4 gap-10">
           <div className="md:col-span-2">
-            <div className="font-display font-bold text-3xl text-white tracking-tighter">UGS HireFlow</div>
+            <div className="flex items-center gap-3">
+              <img src="/favicon.png" alt="UGS" className="h-11 w-11 object-contain" />
+              <div className="font-display font-bold text-3xl text-white tracking-tighter">UGS HireFlow</div>
+            </div>
             <p className="mt-3 text-sm text-slate-400 max-w-md leading-relaxed">
               Enterprise recruitment operating system by UGS IT Solutions. Replace Excel. Run consultancy at scale.
             </p>

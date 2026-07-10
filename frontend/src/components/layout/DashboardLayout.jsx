@@ -1,7 +1,7 @@
 import React from "react";
 import { NavLink, Outlet, Link, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard, Users, Building2, Briefcase, GraduationCap, Kanban,
+  LayoutDashboard, Users, Building2, Briefcase, GraduationCap, Kanban, Handshake,
   BarChart3, Activity, Settings, Bell, Search, Sun, Moon, LogOut, ChevronsLeft, ChevronsRight, User,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -21,6 +21,7 @@ const ADMIN_NAV = [
   { to: "/app/companies", label: "Companies", icon: Building2 },
   { to: "/app/jobs", label: "Job Openings", icon: Briefcase },
   { to: "/app/batches", label: "Batches", icon: GraduationCap },
+  { to: "/app/partners", label: "Partners", icon: Handshake, adminOnly: true },
   { to: "/app/employees", label: "Employees", icon: Users, adminOnly: true },
   { to: "/app/reports", label: "Reports", icon: BarChart3 },
   { to: "/app/activity", label: "Activity Log", icon: Activity },
@@ -58,7 +59,7 @@ export function DashboardLayout() {
   React.useEffect(() => {
     if (!q || q.length < 2) { setResults(null); return; }
     const t = setTimeout(async () => {
-      try { const r = await api.get(`/search?q=${encodeURIComponent(q)}`); setResults(r.data); }
+      try { const r = await api.get(`/search/full?q=${encodeURIComponent(q)}`); setResults(r.data); }
       catch { setResults(null); }
     }, 250);
     return () => clearTimeout(t);
@@ -71,13 +72,15 @@ export function DashboardLayout() {
       {/* Sidebar */}
       <aside className={`${collapsed ? "w-[76px]" : "w-64"} shrink-0 hidden md:flex flex-col border-r border-border bg-white dark:bg-slate-900/40 transition-[width] duration-200`}>
         <div className="h-16 flex items-center gap-2.5 px-4 border-b border-border">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] grid place-items-center soft-shadow shrink-0">
-            <span className="text-white font-display font-bold text-lg">U</span>
-          </div>
-          {!collapsed && (
-            <div className="leading-none">
-              <div className="font-display font-bold tracking-tight">UGS HireFlow</div>
-              <div className="text-[10px] text-muted-foreground overline mt-0.5">Recruitment OS</div>
+          {collapsed ? (
+            <img src="/favicon.png" alt="UGS" className="h-9 w-9 object-contain mx-auto" />
+          ) : (
+            <div className="flex items-center gap-2.5">
+              <img src="/favicon.png" alt="UGS" className="h-10 w-10 object-contain" />
+              <div className="leading-none">
+                <div className="font-display font-bold tracking-tight bg-gradient-to-r from-[#4A5FBF] via-[#5B8CB5] to-[#3EB489] bg-clip-text text-transparent">UGS HireFlow</div>
+                <div className="text-[10px] text-muted-foreground overline mt-0.5">Recruitment OS</div>
+              </div>
             </div>
           )}
         </div>
@@ -122,8 +125,11 @@ export function DashboardLayout() {
                           onClick={() => {
                             setQ(""); setResults(null);
                             if (k === "candidates") navigate(`/app/candidates/${item.id}`);
-                            if (k === "companies") navigate(`/app/companies`);
-                            if (k === "jobs") navigate(`/app/jobs`);
+                            if (k === "companies") navigate(`/app/companies/${item.id}`);
+                            if (k === "jobs") navigate(`/app/jobs/${item.id}`);
+                            if (k === "employees") navigate(`/app/employees/${item.id}`);
+                            if (k === "batches") navigate(`/app/batches/${item.id}`);
+                            if (k === "partners") navigate(`/app/candidates?partner_id=${item.id}`);
                           }}>
                           <span>{item.full_name || item.name || item.title}</span>
                           <span className="text-xs text-muted-foreground">{item.candidate_code || item.industry || item.status}</span>
@@ -131,7 +137,7 @@ export function DashboardLayout() {
                       ))}
                     </div>
                   ) : null))}
-                  {!results.candidates?.length && !results.companies?.length && !results.jobs?.length && (
+                  {!results.candidates?.length && !results.companies?.length && !results.jobs?.length && !results.employees?.length && !results.batches?.length && !results.partners?.length && (
                     <div className="p-4 text-sm text-muted-foreground text-center">No results</div>
                   )}
                 </div>

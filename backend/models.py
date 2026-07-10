@@ -158,6 +158,9 @@ class CandidateBase(BaseModel):
     photo_file_id: Optional[str] = None
     resume_file_id: Optional[str] = None
     documents: List[DocumentRef] = []
+    # Referral captured at registration (before partner assignment)
+    reference_name: Optional[str] = None
+    reference_phone: Optional[str] = None
 
 
 class Candidate(CandidateBase):
@@ -174,12 +177,20 @@ class Candidate(CandidateBase):
     payment_status: PaymentStatus = "pending"
     payments: List[PaymentRecord] = []
     partner: Optional[PartnerInfo] = None
+    partner_id: Optional[str] = None  # link to Partner entity (assigned during verification)
     interview_timeline: List[InterviewEvent] = []
     notes: List[dict] = []  # {id, text, author, created_at}
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
     verified_at: Optional[str] = None
     placed_at: Optional[str] = None
+    # Soft delete / archive
+    is_archived: bool = False
+    is_deleted: bool = False
+    archived_at: Optional[str] = None
+    deleted_at: Optional[str] = None
+    # Profile completion (0-100)
+    profile_completion: int = 0
 
 
 class CandidateCreate(CandidateBase):
@@ -364,3 +375,59 @@ class PaymentCreate(BaseModel):
     payment_mode: Optional[str] = None
     receipt_number: Optional[str] = None
     remarks: Optional[str] = None
+
+
+# ============ PARTNER (referral source) — integrated into candidate workflow ============
+class PartnerBase(BaseModel):
+    name: str
+    phone: str
+    email: Optional[str] = None
+    notes: Optional[str] = None
+    commission_percent: Optional[float] = None
+
+
+class Partner(PartnerBase):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=new_id)
+    partner_code: Optional[str] = None  # UGS-P-0001
+    created_at: str = Field(default_factory=now_iso)
+    created_by: Optional[str] = None
+
+
+class VerifyCandidateRequest(BaseModel):
+    """Admin verify request — may pick existing partner or create new one."""
+    partner_id: Optional[str] = None  # existing partner
+    new_partner: Optional[PartnerBase] = None  # create partner from reference info
+    remarks: Optional[str] = None
+
+
+# ============ ORGANIZATION SETTINGS ============
+class OrganizationSettings(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = "org_settings"
+    company_name: str = "UGS IT Solutions"
+    brand_name: str = "UGS HireFlow"
+    address: Optional[str] = None
+    email: Optional[str] = "hello@ugs-itsolutions.com"
+    phone: Optional[str] = None
+    working_hours: Optional[str] = "Mon-Sat, 9 AM - 7 PM IST"
+    website: Optional[str] = None
+    default_registration_fee: float = 15000
+    updated_at: str = Field(default_factory=now_iso)
+
+
+# ============ SAVED FILTERS ============
+class SavedFilter(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=new_id)
+    user_id: str
+    name: str
+    entity: str = "candidates"  # candidates, jobs, etc.
+    filters: dict = {}
+    created_at: str = Field(default_factory=now_iso)
+
+
+# ============ MERGE ============
+class MergeCandidatesRequest(BaseModel):
+    source_id: str  # will be soft-deleted
+    target_id: str  # keeps

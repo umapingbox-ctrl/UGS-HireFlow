@@ -14,9 +14,14 @@ import AdminDashboard from "@/pages/admin/Dashboard";
 import Candidates from "@/pages/admin/Candidates";
 import CandidateDetail from "@/pages/admin/CandidateDetail";
 import Employees from "@/pages/admin/Employees";
+import EmployeeDetail from "@/pages/admin/EmployeeDetail";
 import Companies from "@/pages/admin/Companies";
+import CompanyDetail from "@/pages/admin/CompanyDetail";
 import Jobs from "@/pages/admin/Jobs";
+import JobWorkspace from "@/pages/admin/JobWorkspace";
 import Batches from "@/pages/admin/Batches";
+import BatchDetail from "@/pages/admin/BatchDetail";
+import Partners from "@/pages/admin/Partners";
 import Pipeline from "@/pages/admin/Pipeline";
 import Reports from "@/pages/admin/Reports";
 import ActivityFeed from "@/pages/admin/ActivityFeed";
@@ -49,9 +54,14 @@ export default function App() {
             <Route path="/app/candidates" element={<Candidates />} />
             <Route path="/app/candidates/:id" element={<CandidateDetail />} />
             <Route path="/app/employees" element={<Employees />} />
+            <Route path="/app/employees/:id" element={<EmployeeDetail />} />
             <Route path="/app/companies" element={<Companies />} />
+            <Route path="/app/companies/:id" element={<CompanyDetail />} />
             <Route path="/app/jobs" element={<Jobs />} />
+            <Route path="/app/jobs/:id" element={<JobWorkspace />} />
             <Route path="/app/batches" element={<Batches />} />
+            <Route path="/app/batches/:id" element={<BatchDetail />} />
+            <Route path="/app/partners" element={<Partners />} />
             <Route path="/app/pipeline" element={<Pipeline />} />
             <Route path="/app/reports" element={<Reports />} />
             <Route path="/app/activity" element={<ActivityFeed />} />

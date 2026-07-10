@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Building2, ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -44,19 +45,21 @@ export default function Companies() {
       </div>
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {companies.map(c => (
-          <Card key={c.id} className="p-5 border-border hover:-translate-y-0.5 transition-transform">
-            <div className="flex items-start justify-between">
-              <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary grid place-items-center"><Building2 className="h-6 w-6" /></div>
-              <StatusPill status={c.hiring_status} />
-            </div>
-            <div className="mt-3 font-display font-semibold text-lg">{c.name}</div>
-            <div className="text-xs text-muted-foreground">{c.industry} · {c.location}</div>
-            {c.about && <p className="mt-2 text-sm text-slate-600 dark:text-slate-300 line-clamp-2">{c.about}</p>}
-            <div className="mt-4 flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">{c.open_jobs || 0} open jobs · {c.assigned_candidates || 0} candidates</span>
-              {c.website && <a href={c.website} target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-center gap-1"><ExternalLink className="h-3 w-3" /> Site</a>}
-            </div>
-          </Card>
+          <Link key={c.id} to={`/app/companies/${c.id}`}>
+            <Card className="p-5 border-border hover:-translate-y-0.5 transition-transform cursor-pointer h-full">
+              <div className="flex items-start justify-between">
+                <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary grid place-items-center"><Building2 className="h-6 w-6" /></div>
+                <StatusPill status={c.hiring_status} />
+              </div>
+              <div className="mt-3 font-display font-semibold text-lg">{c.name}</div>
+              <div className="text-xs text-muted-foreground">{c.industry} · {c.location}</div>
+              {c.about && <p className="mt-2 text-sm text-slate-600 dark:text-slate-300 line-clamp-2">{c.about}</p>}
+              <div className="mt-4 flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">{c.open_jobs || 0} open jobs · {c.assigned_candidates || 0} candidates</span>
+                {c.website && <a href={c.website} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-primary hover:underline inline-flex items-center gap-1"><ExternalLink className="h-3 w-3" /> Site</a>}
+              </div>
+            </Card>
+          </Link>
         ))}
       </div>
     </div>

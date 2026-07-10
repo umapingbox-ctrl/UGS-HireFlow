@@ -60,8 +60,17 @@ async def startup():
     await db.candidates.create_index("email")
     await db.candidates.create_index("phone")
     await db.candidates.create_index("candidate_code")
+    await db.candidates.create_index("partner_id")
+    await db.candidates.create_index("assigned_employee_id")
+    await db.candidates.create_index("assigned_company_id")
+    await db.candidates.create_index("status")
+    await db.candidates.create_index("is_deleted")
     await db.notifications.create_index("user_id")
     await db.activity_logs.create_index("created_at")
+    await db.activity_logs.create_index("entity_id")
+    await db.activity_logs.create_index("actor_id")
+    await db.partners.create_index("phone")
+    await db.partners.create_index("partner_code")
 
     # Auto-seed if empty
     if await db.users.count_documents({}) == 0:
@@ -81,6 +90,11 @@ async def login(body: LoginRequest):
     token = create_access_token(user["id"], user["role"], user["email"])
     clean(user)
     user.pop("password_hash", None)
+    # Activity log for login
+    await log_activity({"id": user["id"], "full_name": user.get("full_name"),
+                          "role": user["role"], "email": user["email"]},
+                        "user.login",
+                        f"{user.get('full_name') or user['email']} logged in")
     return {"access_token": token, "token_type": "bearer", "user": user}
 
 
@@ -155,11 +169,14 @@ async def public_register(body: CandidateCreate):
 @api.get("/candidates")
 async def list_candidates(
     q: str = "", status: str = "", employee_id: str = "", company_id: str = "",
-    batch_id: str = "", payment_status: str = "",
+    batch_id: str = "", payment_status: str = "", partner_id: str = "",
+    include_archived: bool = False,
     skip: int = 0, limit: int = 100,
     current: dict = Depends(get_current_user),
 ):
-    filt = {}
+    filt = {"is_deleted": {"$ne": True}}
+    if not include_archived:
+        filt["is_archived"] = {"$ne": True}
     if current["role"] == "employee":
         filt["assigned_employee_id"] = current["id"]
     if q:
@@ -169,12 +186,14 @@ async def list_candidates(
             {"phone": {"$regex": q, "$options": "i"}},
             {"candidate_code": {"$regex": q, "$options": "i"}},
             {"skills": {"$regex": q, "$options": "i"}},
+            {"reference_name": {"$regex": q, "$options": "i"}},
         ]
     if status: filt["status"] = status
     if employee_id: filt["assigned_employee_id"] = employee_id
     if company_id: filt["assigned_company_id"] = company_id
     if batch_id: filt["batch_id"] = batch_id
     if payment_status: filt["payment_status"] = payment_status
+    if partner_id: filt["partner_id"] = partner_id
     cursor = db.candidates.find(filt, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit)
     items = await cursor.to_list(limit)
     total = await db.candidates.count_documents(filt)
@@ -274,7 +293,32 @@ async def add_interview_event(cid: str, body: InterviewEventCreate,
                   **({"placed_at": now_iso()} if body.stage == "placed" else {})}
     })
     await log_activity(current, "interview.updated",
-                       f"Stage set to {body.stage} for {c['full_name']}", "candidate", cid)
+                       f"Stage set to {body.stage} for {c['full_name']}", "candidate", cid,
+                       {"stage": body.stage, "remarks": body.remarks})
+
+    # Notify candidate + admins
+    cu = await db.users.find_one({"candidate_id": cid})
+    stage_titles = {
+        "interview_scheduled": ("Interview Scheduled", "Your interview has been scheduled."),
+        "selected": ("Selected!", "Congratulations — you've been selected."),
+        "placed": ("Placed", "You have been successfully placed."),
+        "rejected": ("Update on your application", "Please check with your recruiter."),
+        "offer_released": ("Offer Released", "An offer has been released for you."),
+    }
+    if body.stage in stage_titles and cu:
+        title, msg = stage_titles[body.stage]
+        await create_notification(cu["id"], title, msg,
+            "success" if body.stage in ["selected", "placed", "offer_released"] else "info",
+            "/me")
+    if body.stage in ("selected", "placed", "offer_released"):
+        async for admin in db.users.find({"role": "admin"}):
+            await create_notification(admin["id"], f"Candidate {body.stage}",
+                f"{c['full_name']} → {body.stage}", "success",
+                f"/app/candidates/{cid}")
+    if c.get("assigned_employee_id"):
+        await create_notification(c["assigned_employee_id"],
+            f"Interview {body.stage}", f"{c['full_name']} → {body.stage}",
+            "info", f"/app/candidates/{cid}")
     return evt.model_dump()
 
 
@@ -300,6 +344,15 @@ async def add_payment(cid: str, body: PaymentCreate, current: dict = Depends(req
     })
     await log_activity(current, "payment.added", f"Payment of ₹{body.amount} for {c['full_name']}",
                        "candidate", cid, {"amount": body.amount})
+    # Notify candidate + admins
+    cu = await db.users.find_one({"candidate_id": cid})
+    if cu:
+        await create_notification(cu["id"], "Payment Recorded",
+            f"₹{body.amount} recorded. Status: {p_status}", "success", "/me")
+    async for admin in db.users.find({"role": "admin"}):
+        await create_notification(admin["id"], "Payment Updated",
+            f"₹{body.amount} for {c['full_name']} ({p_status})", "info",
+            f"/app/candidates/{cid}")
     return pay.model_dump()
 
 
@@ -443,6 +496,10 @@ async def create_company(body: CompanyBase, current: dict = Depends(require_role
     co = Company(**body.model_dump())
     await db.companies.insert_one(co.model_dump())
     await log_activity(current, "company.created", f"Created company {co.name}", "company", co.id)
+    async for admin in db.users.find({"role": "admin"}):
+        if admin["id"] != current["id"]:
+            await create_notification(admin["id"], "Company Added",
+                f"{co.name} was added", "info", "/app/companies")
     return co.model_dump()
 
 
@@ -502,6 +559,11 @@ async def create_job(body: JobBase, current: dict = Depends(require_roles(["admi
     j = Job(**body.model_dump())
     await db.jobs.insert_one(j.model_dump())
     await log_activity(current, "job.created", f"Created job {j.title}", "job", j.id)
+    # Notify all recruiters + admins
+    async for u in db.users.find({"role": {"$in": ["admin", "employee"]}}):
+        if u["id"] != current["id"]:
+            await create_notification(u["id"], "New Job Opening",
+                f"{j.title} added", "info", "/app/jobs")
     return j.model_dump()
 
 
@@ -558,6 +620,10 @@ async def create_batch(body: BatchBase, current: dict = Depends(require_roles(["
     b = Batch(**body.model_dump())
     await db.batches.insert_one(b.model_dump())
     await log_activity(current, "batch.created", f"Created batch {b.name}", "batch", b.id)
+    async for u in db.users.find({"role": {"$in": ["admin", "employee"]}}):
+        if u["id"] != current["id"]:
+            await create_notification(u["id"], "New Batch",
+                f"{b.name} started", "info", "/app/batches")
     return b.model_dump()
 
 
@@ -775,6 +841,9 @@ async def root():
 
 app.include_router(api)
 
+from routes_v2 import router as v2_router
+app.include_router(v2_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -782,6 +851,35 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ---------- ERROR HANDLERS ----------
+from fastapi import Request
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+
+
+@app.exception_handler(HTTPException)
+async def http_exc_handler(request: Request, exc: HTTPException):
+    return JSONResponse(status_code=exc.status_code,
+                          content={"detail": exc.detail, "status": exc.status_code})
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_handler(request: Request, exc: RequestValidationError):
+    errors = []
+    for err in exc.errors():
+        errors.append({"field": ".".join(str(x) for x in err.get("loc", [])),
+                        "message": err.get("msg", "Invalid")})
+    return JSONResponse(status_code=422,
+                          content={"detail": "Validation failed", "errors": errors})
+
+
+@app.exception_handler(Exception)
+async def unhandled_exc_handler(request: Request, exc: Exception):
+    logger.exception(f"Unhandled error on {request.method} {request.url.path}")
+    return JSONResponse(status_code=500,
+                          content={"detail": "Internal server error", "status": 500})
 
 
 @app.on_event("shutdown")
