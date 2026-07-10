@@ -1,56 +1,72 @@
-import { useEffect } from "react";
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
-import { HOME } from "@/constants/testIds";
+import { useAuth } from "@/context/AuthContext";
+import { PublicLayout } from "@/components/layout/PublicLayout";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import Home from "@/pages/public/Home";
+import About from "@/pages/public/About";
+import Services from "@/pages/public/Services";
+import Contact from "@/pages/public/Contact";
+import Register from "@/pages/public/Register";
+import Login from "@/pages/auth/Login";
+import AdminDashboard from "@/pages/admin/Dashboard";
+import Candidates from "@/pages/admin/Candidates";
+import CandidateDetail from "@/pages/admin/CandidateDetail";
+import Employees from "@/pages/admin/Employees";
+import Companies from "@/pages/admin/Companies";
+import Jobs from "@/pages/admin/Jobs";
+import Batches from "@/pages/admin/Batches";
+import Pipeline from "@/pages/admin/Pipeline";
+import Reports from "@/pages/admin/Reports";
+import ActivityFeed from "@/pages/admin/ActivityFeed";
+import Settings from "@/pages/admin/Settings";
+import CandidateHome from "@/pages/candidate/CandidateHome";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
-
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
-
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
-  return (
-    <div>
-      <header className="App-header">
-        <a
-          data-testid={HOME.emergentLink}
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
-};
-
-function App() {
-  return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </div>
-  );
+function RequireAuth({ roles }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (roles && !roles.includes(user.role)) return <Navigate to="/login" replace />;
+  return <Outlet />;
 }
 
-export default App;
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route element={<PublicLayout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/services" element={<Services />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/register" element={<Register />} />
+        </Route>
+        <Route path="/login" element={<Login />} />
+
+        <Route element={<RequireAuth roles={["admin", "employee"]} />}>
+          <Route element={<DashboardLayout />}>
+            <Route path="/app" element={<AdminDashboard />} />
+            <Route path="/app/candidates" element={<Candidates />} />
+            <Route path="/app/candidates/:id" element={<CandidateDetail />} />
+            <Route path="/app/employees" element={<Employees />} />
+            <Route path="/app/companies" element={<Companies />} />
+            <Route path="/app/jobs" element={<Jobs />} />
+            <Route path="/app/batches" element={<Batches />} />
+            <Route path="/app/pipeline" element={<Pipeline />} />
+            <Route path="/app/reports" element={<Reports />} />
+            <Route path="/app/activity" element={<ActivityFeed />} />
+            <Route path="/app/settings" element={<Settings />} />
+          </Route>
+        </Route>
+
+        <Route element={<RequireAuth roles={["candidate"]} />}>
+          <Route element={<DashboardLayout />}>
+            <Route path="/me" element={<CandidateHome />} />
+          </Route>
+        </Route>
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
