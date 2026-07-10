@@ -1,10 +1,14 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import { Users, Building2, Briefcase, GraduationCap, TrendingUp, Clock, Award, IndianRupee } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { Card } from "@/components/ui/card";
 import { StatusPill } from "@/components/StatusDot";
+import { AnimatedCounter } from "@/components/animated/AnimatedCounter";
+import { Stagger, staggerItem } from "@/components/animated/Reveal";
+import { CardSkeleton, Skeleton } from "@/components/Skeleton";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 
@@ -19,7 +23,16 @@ export default function AdminDashboard() {
     enabled: !!user,
   });
 
-  if (isLoading || !data) return <div className="text-muted-foreground">Loading dashboard...</div>;
+  if (isLoading || !data) return (
+    <div className="space-y-6">
+      <Skeleton className="h-10 w-96" />
+      <CardSkeleton count={8} />
+      <div className="grid lg:grid-cols-3 gap-6">
+        <Skeleton className="h-80 lg:col-span-2" />
+        <Skeleton className="h-80" />
+      </div>
+    </div>
+  );
   const k = data.kpis || {};
 
   const cards = isAdmin ? [
@@ -42,18 +55,22 @@ export default function AdminDashboard() {
     <div className="space-y-8" data-testid="admin-dashboard">
       <div>
         <div className="overline text-primary">Overview</div>
-        <h1 className="mt-2 font-display text-4xl font-bold tracking-tighter">Hey {user?.full_name?.split(" ")[0]}, here's the pulse.</h1>
+        <h1 className="mt-2 font-display text-4xl font-bold tracking-tighter">Hey {user?.full_name?.split(" ")[0]}, here&apos;s the pulse.</h1>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <Stagger className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {cards.map(c => (
-          <Card key={c.label} className="p-5 border-border soft-shadow hover:-translate-y-0.5 transition-transform">
-            <div className={`h-10 w-10 rounded-lg grid place-items-center ${c.tone}`}><c.icon className="h-5 w-5" /></div>
-            <div className="mt-4 font-display text-3xl font-bold">{c.value ?? 0}</div>
-            <div className="text-xs text-muted-foreground mt-1">{c.label}</div>
-          </Card>
+          <motion.div key={c.label} variants={staggerItem} whileHover={{ y: -4 }}>
+            <Card className="p-5 border-border soft-shadow h-full">
+              <div className={`h-10 w-10 rounded-lg grid place-items-center ${c.tone}`}><c.icon className="h-5 w-5" /></div>
+              <div className="mt-4 font-display text-3xl font-bold">
+                <AnimatedCounter end={c.value ?? 0} />
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">{c.label}</div>
+            </Card>
+          </motion.div>
         ))}
-      </div>
+      </Stagger>
 
       {isAdmin && (
         <div className="grid lg:grid-cols-3 gap-6">

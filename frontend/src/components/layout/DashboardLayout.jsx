@@ -1,9 +1,11 @@
 import React from "react";
-import { NavLink, Outlet, Link, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, Link, useNavigate, useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Users, Building2, Briefcase, GraduationCap, Kanban, Handshake,
   BarChart3, Activity, Settings, Bell, Search, Sun, Moon, LogOut, ChevronsLeft, ChevronsRight, User,
 } from "lucide-react";
+import { Logo } from "@/components/Logo";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { Button } from "@/components/ui/button";
@@ -36,6 +38,7 @@ export function DashboardLayout() {
   const { user, logout } = useAuth();
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const [collapsed, setCollapsed] = React.useState(false);
   const [q, setQ] = React.useState("");
   const [results, setResults] = React.useState(null);
@@ -48,7 +51,7 @@ export function DashboardLayout() {
     try {
       const r = await api.get("/notifications");
       setNotifs(r.data);
-    } catch (e) {}
+    } catch (e) { /* ignore */ }
   }, []);
   React.useEffect(() => {
     fetchNotifs();
@@ -195,7 +198,17 @@ export function DashboardLayout() {
           </DropdownMenu>
         </header>
 
-        <main className="flex-1 min-w-0 p-4 md:p-8"><Outlet /></main>
+        <main className="flex-1 min-w-0 p-4 md:p-8">
+          <AnimatePresence mode="wait">
+            <motion.div key={location.pathname}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}>
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
+        </main>
       </div>
     </div>
   );
